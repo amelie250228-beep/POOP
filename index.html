@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+<title>🚽 공포 똥 피하기 🚽</title>
+
+<style>
+
+body{
+    margin:0;
+    overflow:hidden;
+    background:radial-gradient(circle, #400000, #000000);
+    font-family:sans-serif;
+    text-align:center;
+    color:white;
+    touch-action:none;
+}
+
+h1{
+    margin:10px;
+    color:#ff4444;
+    text-shadow:0 0 10px red;
+    font-size:24px;
+}
+
+#game{
+    width:100vw;
+    height:80vh;
+    position:relative;
+    overflow:hidden;
+
+    border-top:3px solid red;
+    border-bottom:3px solid red;
+
+    background:
+    linear-gradient(
+        rgba(255,0,0,0.05),
+        rgba(0,0,0,0.2)
+    );
+}
+
+#player{
+    position:absolute;
+    bottom:20px;
+    left:50%;
+
+    transform:translateX(-50%);
+
+    width:60px;
+    height:60px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:50px;
+}
+
+.poop{
+    position:absolute;
+    font-size:32px;
+}
+
+#score{
+    margin-top:10px;
+    font-size:22px;
+    color:#ff8888;
+}
+
+#startScreen{
+    position:absolute;
+
+    width:100%;
+    height:100%;
+
+    background:rgba(0,0,0,0.75);
+
+    display:flex;
+    flex-direction:column;
+
+    align-items:center;
+    justify-content:center;
+
+    z-index:10;
+
+    font-size:22px;
+}
+
+#small{
+    margin-top:15px;
+    font-size:13px;
+    color:#bbbbbb;
+}
+
+#rankingBox{
+
+    position:fixed;
+
+    top:10px;
+    right:10px;
+
+    width:220px;
+
+    background:rgba(0,0,0,0.7);
+
+    border:2px solid red;
+
+    border-radius:10px;
+
+    padding:10px;
+
+    z-index:20;
+
+    font-size:13px;
+}
+
+#rankingBox h3{
+    margin:5px 0;
+    color:#ff6666;
+}
+
+#rankingBox ol{
+    padding-left:20px;
+    text-align:left;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🚽 공포 똥 피하기 🚽</h1>
+
+<div id="rankingBox">
+
+    <h3>🏆 전체 랭킹</h3>
+    <ol id="allRanking"></ol>
+
+    <h3>🔥 오늘의 랭킹</h3>
+    <ol id="todayRanking"></ol>
+
+</div>
+
+<div id="game">
+
+    <div id="player">🚽</div>
+
+    <div id="startScreen">
+
+        <div>화면 터치해서 시작</div>
+
+        <div id="small">
+            손가락으로 변기를 움직여라...
+        </div>
+
+    </div>
+
+</div>
+
+<div id="score">점수 : 0</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+    getDatabase,
+    ref,
+    push,
+    onValue
+}
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyDIK5BU3xD49oDcsX4fB3ukWcZkJkS16qg",
+
+  authDomain: "sese-cc512.firebaseapp.com",
+
+  databaseURL:
+  "https://sese-cc512-default-rtdb.firebaseio.com",
+
+  projectId: "sese-cc512",
+
+  storageBucket:
+  "sese-cc512.firebasestorage.app",
+
+  messagingSenderId: "406256884282",
+
+  appId:
+  "1:406256884282:web:ae0cf47b7eee448a9df303"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getDatabase(app);
+
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const startScreen =
+document.getElementById("startScreen");
+const scoreText =
+document.getElementById("score");
+
+const allRanking =
+document.getElementById("allRanking");
+
+const todayRanking =
+document.getElementById("todayRanking");
+
+let gameStarted = false;
+let gameOver = false;
+
+let score = 0;
+
+let playerX = window.innerWidth / 2;
+
+// 아이디 입력
+let username =
+localStorage.getItem("poop_username");
+
+if(!username){
+
+    username = prompt("아이디를 입력하세요");
+
+    if(!username || username.trim() === ""){
+
+        username =
+        "익명변기" +
+        Math.floor(Math.random()*9999);
+
+    }
+
+    localStorage.setItem(
+        "poop_username",
+        username
+    );
+}
+
+// 랭킹 불러오기
+function loadRankings(){
+
+    const rankingsRef =
+        ref(db, "rankings");
+
+    onValue(rankingsRef, (snapshot)=>{
+
+        const data = snapshot.val();
+
+        if(!data) return;
+
+        const rankings =
+            Object.values(data);
+
+        const today =
+            new Date().toLocaleDateString();
+
+        // 전체 랭킹
+        const allSorted = [...rankings]
+        .sort((a,b)=> b.score - a.score)
+        .slice(0,5);
+
+        allRanking.innerHTML = "";
+
+        allSorted.forEach(r=>{
+
+            const li =
+                document.createElement("li");
+
+            li.innerText =
+                `${r.name} - ${r.score}`;
+
+            allRanking.appendChild(li);
+
+        });
+
+        // 오늘 랭킹
+        const todaySorted = rankings
+        .filter(r=> r.date === today)
+        .sort((a,b)=> b.score - a.score)
+        .slice(0,5);
+
+        todayRanking.innerHTML = "";
+
+        todaySorted.forEach(r=>{
+
+            const li =
+                document.createElement("li");
+
+            li.innerText =
+                `${r.name} - ${r.score}`;
+
+            todayRanking.appendChild(li);
+
+        });
+
+    });
+
+}
+
+loadRankings();
+
+// 점수 저장
+async function saveScore(){
+
+    const today =
+        new Date().toLocaleDateString();
+
+    push(ref(db, "rankings"), {
+
+        name: username,
+        score: score,
+        date: today
+
+    });
+
+}
+
+// 시작
+startScreen.addEventListener(
+    "click",
+    startGame
+);
+
+startScreen.addEventListener(
+    "touchstart",
+    startGame
+);
+
+function startGame(){
+
+    if(gameStarted) return;
+
+    gameStarted = true;
+
+    startScreen.style.display = "none";
+
+    spawnLoop();
+}
+
+// 터치 이동
+game.addEventListener("touchmove", (e)=>{
+
+    if(!gameStarted || gameOver) return;
+
+    const touch = e.touches[0];
+
+    playerX = touch.clientX;
+
+    // 벽 제한
+    if(playerX < 30) playerX = 30;
+
+    if(playerX > window.innerWidth - 30){
+
+        playerX =
+        window.innerWidth - 30;
+    }
+
+    player.style.left = playerX + "px";
+});
+
+// PC 마우스 이동
+game.addEventListener("mousemove", (e)=>{
+
+    if(!gameStarted || gameOver) return;
+
+    playerX = e.clientX;
+
+    if(playerX < 30) playerX = 30;
+
+    if(playerX > window.innerWidth - 30){
+
+        playerX =
+        window.innerWidth - 30;
+    }
+
+    player.style.left = playerX + "px";
+});
+
+// 똥 생성
+function createPoop(){
+
+    const poop =
+    document.createElement("div");
+
+    poop.classList.add("poop");
+
+    poop.innerText = "💩";
+
+    let x =
+    Math.random() *
+    (window.innerWidth - 40);
+
+    let y = -50;
+
+    let speed =
+    3 + Math.random() * 4 + score * 0.15;
+
+    poop.style.left = x + "px";
+    poop.style.top = y + "px";
+
+    game.appendChild(poop);
+
+    function fall(){
+
+        if(gameOver) return;
+
+        y += speed;
+
+        poop.style.top = y + "px";
+
+        // 충돌 판정
+        const playerRect =
+        player.getBoundingClientRect();
+
+        const poopRect =
+        poop.getBoundingClientRect();
+
+        if(
+
+            poopRect.left <
+            playerRect.right &&
+
+            poopRect.right >
+            playerRect.left &&
+
+            poopRect.top <
+            playerRect.bottom &&
+
+            poopRect.bottom >
+            playerRect.top
+
+        ){
+
+            gameOver = true;
+
+            saveScore();
+
+            alert(
+                "☠️ 게임 오버!\n\n" +
+                "아이디 : " + username +
+                "\n점수 : " + score
+            );
+
+            location.reload();
+        }
+
+        // 아래 도달
+        if(y > window.innerHeight){
+
+            poop.remove();
+
+            score++;
+
+            scoreText.innerText =
+            "점수 : " + score;
+
+            return;
+        }
+
+        requestAnimationFrame(fall);
+    }
+
+    fall();
+}
+
+// 계속 생성
+function spawnLoop(){
+
+    if(gameOver) return;
+
+    createPoop();
+
+    let delay = 700 - score * 5;
+
+    if(delay < 250){
+
+        delay = 250;
+    }
+
+    setTimeout(spawnLoop, delay);
+}
+
+</script>
+
+</body>
+</html>
