@@ -175,6 +175,34 @@ h1{
     background:#ff0000;
 }
 
+/* 추가된 폭죽 효과 */
+
+.effect{
+
+    position:absolute;
+
+    pointer-events:none;
+
+    animation:pop 1s linear forwards;
+
+    font-size:30px;
+
+    z-index:50;
+}
+
+@keyframes pop{
+
+    0%{
+        transform:translateY(0) scale(0.5);
+        opacity:1;
+    }
+
+    100%{
+        transform:translateY(-150px) scale(1.8);
+        opacity:0;
+    }
+}
+
 </style>
 </head>
 
@@ -287,6 +315,11 @@ let gameOver = false;
 
 let score = 0;
 
+/* 추가된 최고점 저장 */
+
+let bestScore =
+Number(localStorage.getItem("bestScore") || 0);
+
 let playerX = window.innerWidth / 2;
 
 // 아이디 입력
@@ -309,6 +342,41 @@ if(!username){
         "poop_username",
         username
     );
+}
+
+/* 추가된 폭죽 함수 */
+
+function celebrationEffect(){
+
+    const emojis = ["🎆","💖","✨","🎉","💥"];
+
+    for(let i=0; i<40; i++){
+
+        const effect =
+        document.createElement("div");
+
+        effect.classList.add("effect");
+
+        effect.innerText =
+        emojis[Math.floor(Math.random()*emojis.length)];
+
+        effect.style.left =
+        Math.random() * window.innerWidth + "px";
+
+        effect.style.top =
+        Math.random() * window.innerHeight + "px";
+
+        effect.style.fontSize =
+        20 + Math.random()*40 + "px";
+
+        document.body.appendChild(effect);
+
+        setTimeout(()=>{
+
+            effect.remove();
+
+        },1000);
+    }
 }
 
 // 랭킹 불러오기
@@ -488,19 +556,23 @@ function createPoop(){
         const poopRect =
         poop.getBoundingClientRect();
 
+        /* 수정된 히트박스 */
+
+        const padding = 15;
+
         if(
 
-            poopRect.left <
-            playerRect.right &&
+            poopRect.left + padding <
+            playerRect.right - padding &&
 
-            poopRect.right >
-            playerRect.left &&
+            poopRect.right - padding >
+            playerRect.left + padding &&
 
-            poopRect.top <
-            playerRect.bottom &&
+            poopRect.top + padding <
+            playerRect.bottom - padding &&
 
-            poopRect.bottom >
-            playerRect.top
+            poopRect.bottom - padding >
+            playerRect.top + padding
 
         ){
 
@@ -510,9 +582,33 @@ function createPoop(){
 
             loadRankings();
 
+            /* 추가된 신기록 판정 */
+
+            let newRecord = false;
+
+            if(score > bestScore){
+
+                bestScore = score;
+
+                localStorage.setItem(
+                    "bestScore",
+                    bestScore
+                );
+
+                newRecord = true;
+
+                celebrationEffect();
+            }
+
             finalScore.innerHTML =
-            `<h3>${username}</h3>
-             <h2>점수 : ${score}</h2>`;
+            `
+            <h3>${username}</h3>
+            <h2>점수 : ${score}</h2>
+
+            ${newRecord
+            ? "<h1>🎉 신기록 달성!! 🎉</h1>"
+            : ""}
+            `;
 
             rankingBox.style.display = "block";
 
