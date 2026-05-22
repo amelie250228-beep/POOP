@@ -236,6 +236,9 @@ h1{
             <h3>🔥 오늘의 랭킹</h3>
             <ol id="todayRanking"></ol>
 
+            <h3>🕒 최근 플레이 유저</h3>
+            <ol id="recentPlayers"></ol>
+
             <button id="restartBtn">
                 다시 시작
             </button>
@@ -308,6 +311,9 @@ document.getElementById("allRanking");
 
 const todayRanking =
 document.getElementById("todayRanking");
+
+const recentPlayers =
+document.getElementById("recentPlayers");
 
 let gameStarted = false;
 let gameOver = false;
@@ -465,6 +471,39 @@ function loadRankings(){
 
         });
 
+        // 최근 플레이 유저 + 최고 점수
+        const sortedByRecent =
+        [...rankings]
+        .sort((a,b)=>
+            (b.time || 0) - (a.time || 0)
+        );
+
+        const addedUsers = [];
+
+        recentPlayers.innerHTML = "";
+
+        sortedByRecent.forEach(r=>{
+
+            if(addedUsers.includes(r.name)) return;
+
+            addedUsers.push(r.name);
+
+            const bestScore =
+            rankings
+            .filter(user => user.name === r.name)
+            .sort((a,b)=> b.score - a.score)[0]
+            .score;
+
+            const li =
+            document.createElement("li");
+
+            li.innerText =
+            `${r.name} - 최고 ${bestScore}`;
+
+            recentPlayers.appendChild(li);
+
+        });
+
     });
 
 }
@@ -479,7 +518,8 @@ async function saveScore(){
 
         name: username,
         score: score,
-        date: today
+        date: today,
+        time: Date.now()
 
     });
 
