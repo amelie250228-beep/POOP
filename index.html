@@ -175,8 +175,6 @@ h1{
     background:#ff0000;
 }
 
-/* 추가된 폭죽 효과 */
-
 .effect{
 
     position:absolute;
@@ -259,7 +257,8 @@ import {
     getDatabase,
     ref,
     push,
-    onValue
+    onValue,
+    get
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -315,8 +314,6 @@ let gameOver = false;
 
 let score = 0;
 
-/* 추가된 최고점 저장 */
-
 let bestScore =
 Number(localStorage.getItem("bestScore") || 0);
 
@@ -344,7 +341,7 @@ if(!username){
     );
 }
 
-/* 추가된 폭죽 함수 */
+/* 전체 1등 폭죽 */
 
 function celebrationEffect(){
 
@@ -368,6 +365,38 @@ function celebrationEffect(){
 
         effect.style.fontSize =
         20 + Math.random()*40 + "px";
+
+        document.body.appendChild(effect);
+
+        setTimeout(()=>{
+
+            effect.remove();
+
+        },1000);
+    }
+}
+
+/* 개인/오늘 1등 박수 */
+
+function clapEffect(){
+
+    for(let i=0; i<20; i++){
+
+        const effect =
+        document.createElement("div");
+
+        effect.classList.add("effect");
+
+        effect.innerText = "👏";
+
+        effect.style.left =
+        Math.random() * window.innerWidth + "px";
+
+        effect.style.top =
+        Math.random() * window.innerHeight + "px";
+
+        effect.style.fontSize =
+        20 + Math.random()*30 + "px";
 
         document.body.appendChild(effect);
 
@@ -487,7 +516,6 @@ game.addEventListener("touchmove", (e)=>{
 
     playerX = touch.clientX;
 
-    // 벽 제한
     if(playerX < 30) playerX = 30;
 
     if(playerX > window.innerWidth - 30){
@@ -549,14 +577,11 @@ function createPoop(){
 
         poop.style.top = y + "px";
 
-        // 충돌 판정
         const playerRect =
         player.getBoundingClientRect();
 
         const poopRect =
         poop.getBoundingClientRect();
-
-        /* 수정된 히트박스 */
 
         const padding = 15;
 
@@ -582,35 +607,77 @@ function createPoop(){
 
             loadRankings();
 
-            /* 추가된 신기록 판정 */
+            const rankingsRef =
+            ref(db, "rankings");
 
-            let newRecord = false;
+            get(rankingsRef).then((snapshot)=>{
 
-            if(score > bestScore){
+                const data = snapshot.val();
 
-                bestScore = score;
+                let message = "";
 
-                localStorage.setItem(
-                    "bestScore",
-                    bestScore
-                );
+                if(data){
 
-                newRecord = true;
+                    const rankings =
+                    Object.values(data);
 
-                celebrationEffect();
-            }
+                    const today =
+                    new Date().toLocaleDateString();
 
-            finalScore.innerHTML =
-            `
-            <h3>${username}</h3>
-            <h2>점수 : ${score}</h2>
+                    // 개인 최고
+                    if(score > bestScore){
 
-            ${newRecord
-            ? "<h1>🎉 신기록 달성!! 🎉</h1>"
-            : ""}
-            `;
+                        bestScore = score;
 
-            rankingBox.style.display = "block";
+                        localStorage.setItem(
+                            "bestScore",
+                            bestScore
+                        );
+
+                        message +=
+                        "<h2>👏 개인 랭킹 1등! 👏</h2>";
+
+                        clapEffect();
+                    }
+
+                    // 오늘 최고
+                    const todayTop =
+                    rankings
+                    .filter(r=> r.date === today)
+                    .sort((a,b)=> b.score - a.score)[0];
+
+                    if(!todayTop || score > todayTop.score){
+
+                        message +=
+                        "<h2>👏 오늘 랭킹 1등! 👏</h2>";
+
+                        clapEffect();
+                    }
+
+                    // 전체 최고
+                    const allTop =
+                    rankings
+                    .sort((a,b)=> b.score - a.score)[0];
+
+                    if(!allTop || score > allTop.score){
+
+                        message +=
+                        "<h1>🎆 전체 랭킹 1등!! 🎆</h1>";
+
+                        celebrationEffect();
+                    }
+                }
+
+                finalScore.innerHTML =
+                `
+                <h3>${username}</h3>
+                <h2>점수 : ${score}</h2>
+                ${message}
+                `;
+
+                rankingBox.style.display = "block";
+
+            });
 
             return;
         }
